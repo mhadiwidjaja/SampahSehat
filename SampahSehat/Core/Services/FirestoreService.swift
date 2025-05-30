@@ -74,9 +74,8 @@ class FirestoreService {
             ]
             
             try await userRef.setData(userData)
-            print("✅ Created dummy user in Firestore")
         } catch {
-            print("❌ Error creating dummy user: \(error)")
+            // Silent error handling
         }
     }
     
@@ -133,9 +132,8 @@ class FirestoreService {
                 let docRef = db.collection(schedulesCollection).document(scheduleId)
                 try await docRef.setData(scheduleData)
             }
-            print("✅ Created \(dummySchedules.count) dummy schedules in Firestore")
         } catch {
-            print("❌ Error creating dummy schedules: \(error)")
+            // Silent error handling
         }
     }
     
@@ -149,7 +147,6 @@ class FirestoreService {
             
             return !snapshot.isEmpty
         } catch {
-            print("❌ Error checking initialization: \(error)")
             return false
         }
     }
@@ -172,7 +169,7 @@ class FirestoreService {
                 )
             }
         } catch {
-            print("❌ Error fetching user: \(error)")
+            // Silent error handling
         }
         
         // Fallback to dummy data
@@ -220,13 +217,9 @@ class FirestoreService {
             // Cache the schedules locally for offline use
             cacheSchedules(schedules)
             
-            print("✅ Fetched \(schedules.count) schedules from Firestore")
             return schedules
             
         } catch {
-            print("❌ Error fetching schedules from Firestore: \(error)")
-            print("🔄 Falling back to cached data...")
-            
             // Fallback to cached data (offline mode)
             return getCachedSchedules(collectorId: collectorId, date: dateString)
         }
@@ -253,13 +246,9 @@ class FirestoreService {
             // Also update cached data
             updateCachedSchedule(scheduleId: scheduleId, status: status, reason: reason, timestamp: timestamp)
             
-            print("✅ Updated schedule \(scheduleId) to \(status) in Firestore")
             return true
             
         } catch {
-            print("❌ Error updating schedule in Firestore: \(error)")
-            print("🔄 Updating locally for offline sync...")
-            
             // Update locally for offline sync
             let success = updateCachedSchedule(scheduleId: scheduleId, status: status, reason: reason, timestamp: timestamp)
             
@@ -321,8 +310,6 @@ class FirestoreService {
         var pendingUpdates = userDefaults.array(forKey: "pending_updates") as? [[String: Any]] ?? []
         pendingUpdates.append(pendingUpdate)
         userDefaults.set(pendingUpdates, forKey: "pending_updates")
-        
-        print("📤 Stored pending update for schedule \(scheduleId)")
     }
     
     func syncPendingUpdates() async {
@@ -331,8 +318,6 @@ class FirestoreService {
         if pendingUpdates.isEmpty {
             return
         }
-        
-        print("🔄 Syncing \(pendingUpdates.count) pending updates...")
         
         var successfulUpdates: [Int] = []
         
@@ -359,10 +344,9 @@ class FirestoreService {
                 
                 try await db.collection(schedulesCollection).document(scheduleId).updateData(updateData)
                 successfulUpdates.append(index)
-                print("✅ Synced update for schedule \(scheduleId)")
                 
             } catch {
-                print("❌ Failed to sync update for schedule \(scheduleId): \(error)")
+                // Silent error handling
             }
         }
         
@@ -373,7 +357,6 @@ class FirestoreService {
                 remainingUpdates.remove(at: index)
             }
             userDefaults.set(remainingUpdates, forKey: "pending_updates")
-            print("✅ Removed \(successfulUpdates.count) synced updates")
         }
     }
     
