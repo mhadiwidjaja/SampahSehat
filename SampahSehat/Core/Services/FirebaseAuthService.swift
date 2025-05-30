@@ -22,11 +22,8 @@ class FirebaseAuthService {
     private init() {}
 
     func login(email: String, pass: String) async throws -> User? {
-        print("🔐 Attempting login with email: \(email)")
-        
         // For dummy data, we'll simulate login with predefined collector
         if email == "collector@test.com" && pass == "123456" {
-            print("✅ Login successful!")
             // Mark as logged in and store user ID
             isLoggedIn = true
             loggedInUserId = "collector123"
@@ -39,7 +36,6 @@ class FirebaseAuthService {
                 role: "Collector"
             )
         } else {
-            print("❌ Invalid credentials")
             isLoggedIn = false
             loggedInUserId = nil
             throw NSError(domain: "AuthError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid credentials. Use collector@test.com with password 123456"])
@@ -52,16 +48,13 @@ class FirebaseAuthService {
     }
 
     func logout() throws {
-        print("🚪 Logging out...")
         try auth.signOut()
         // Clear login state
         isLoggedIn = false
         loggedInUserId = nil
-        print("✅ Logout successful")
     }
 
     func getCurrentUserAuthId() -> String? {
-        print("🔍 getCurrentUserAuthId called - isLoggedIn: \(isLoggedIn), userId: \(loggedInUserId ?? "nil")")
         // Only return user ID if actually logged in
         return isLoggedIn ? loggedInUserId : nil
     }

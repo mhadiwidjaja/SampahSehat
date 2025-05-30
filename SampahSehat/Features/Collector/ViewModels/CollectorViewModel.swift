@@ -18,22 +18,16 @@ class CollectorViewModel: ObservableObject {
     @Published var updateError: String? = nil
 
     func loadTodaysSchedule() {
-        print("🚀 CollectorViewModel: Starting to load today's schedule")
-        
         guard let collectorId = authService.getCurrentUserAuthId() else {
-            print("❌ No collector ID found from auth service")
             updateError = "Collector not logged in."
             return
         }
 
-        print("👤 Loading schedule for collector: \(collectorId)")
         isLoading = true
         updateError = nil
         
         Task {
-            print("📞 Calling firestoreService.getSchedulesForCollector...")
             let schedules = await firestoreService.getSchedulesForCollector(collectorId: collectorId, date: Date())
-            print("📨 Received \(schedules.count) schedules from service")
             
             // Update UI on main thread
             await MainActor.run {
@@ -42,22 +36,14 @@ class CollectorViewModel: ObservableObject {
                 
                 if schedules.isEmpty {
                     self.updateError = "No schedules found for today."
-                    print("❌ No schedules found - setting error message")
                 } else {
                     self.updateError = nil
-                    print("✅ Successfully loaded \(schedules.count) schedules")
                 }
-            }
-            
-            // Print each schedule for debugging
-            for schedule in schedules {
-                print("📋 Loaded schedule: \(schedule.areaInfo) - \(schedule.status)")
             }
         }
     }
 
     func markScheduleCompleted(scheduleId: String) {
-        print("✅ Marking schedule \(scheduleId) as completed")
         updateError = nil
         Task {
             let success = await firestoreService.updateScheduleStatus(scheduleId: scheduleId, status: "Completed")
@@ -65,32 +51,55 @@ class CollectorViewModel: ObservableObject {
                 if success {
                     if let index = todaysSchedule.firstIndex(where: { $0.scheduleId == scheduleId }) {
                         todaysSchedule[index].status = "Completed"
-                        print("✅ UI updated for completed schedule")
+                        todaysSchedule[index].timestamp = getCurrentTimestamp()
                     }
                 } else {
                     updateError = "Failed to mark as completed. Please try again."
-                    print("❌ Failed to mark schedule as completed")
                 }
             }
         }
     }
 
-    func markScheduleMissed(scheduleId: String) {
-        print("❌ Marking schedule \(scheduleId) as missed")
+    func markScheduleMissed(scheduleId: String, reason: String) {
         updateError = nil
         Task {
-            let success = await firestoreService.updateScheduleStatus(scheduleId: scheduleId, status: "Missed")
+            let success = await firestoreService.updateScheduleStatus(scheduleId: scheduleId, status: "Missed", reason: reason)
             await MainActor.run {
                 if success {
                     if let index = todaysSchedule.firstIndex(where: { $0.scheduleId == scheduleId }) {
                         todaysSchedule[index].status = "Missed"
-                        print("✅ UI updated for missed schedule")
+                        todaysSchedule[index].reason = reason
+                        todaysSchedule[index].timestamp = getCurrentTimestamp()
                     }
                 } else {
                     updateError = "Failed to mark as missed. Please try again."
-                    print("❌ Failed to mark schedule as missed")
                 }
             }
         }
+    }
+    
+    func markScheduleOnHold(scheduleId: String, reason: String) {
+        updateError = nil
+        Task {
+            let success = await firestoreService.markScheduleOnHold(scheduleId: scheduleId, reason: reason)
+            await MainActor.run {
+                if success {
+                    if let index = todaysSchedule.firstIndex(where: { $0.scheduleId == scheduleId }) {
+                        todaysSchedule[index].status = "On Hold"
+                        todaysSchedule[index].reason = reason
+                        todaysSchedule[index].timestamp = getCurrentTimestamp()
+                    }
+                } else {
+                    updateError = "Failed to mark as on hold. Please try again."
+                }
+            }
+        }
+    }
+    
+    private func getCurrentTimestamp() -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        dateFormatter.timeZone = TimeZone(identifier: "UTC")
+        return dateFormatter.string(from: Date())
     }
 }
