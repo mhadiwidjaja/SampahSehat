@@ -4,11 +4,12 @@
 //
 //  Created by student on 27/05/25.
 //
-
 import SwiftUI
 
 struct CollectorScheduleListView: View {
     @EnvironmentObject var viewModel: CollectorViewModel
+    // Use shared instance instead of creating new one
+    @ObservedObject private var authViewModel = AuthViewModel.shared
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
@@ -17,9 +18,19 @@ struct CollectorScheduleListView: View {
                 if viewModel.isLoading {
                     ProgressView("Loading schedule...")
                 } else if viewModel.todaysSchedule.isEmpty {
-                    Text("No schedules assigned for today or an error occurred.")
-                    if let error = viewModel.updateError {
-                        Text("Error: \(error)").foregroundColor(.red)
+                    VStack {
+                        Text("No schedules assigned for today")
+                        if let error = viewModel.updateError {
+                            Text("Error: \(error)")
+                                .foregroundColor(.red)
+                        }
+                        
+                        Button("Refresh") {
+                            print("🔄 Manual refresh pressed")
+                            viewModel.loadTodaysSchedule()
+                        }
+                        .padding()
+                        .buttonStyle(.borderedProminent)
                     }
                 } else {
                     List {
@@ -40,18 +51,22 @@ struct CollectorScheduleListView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Logout") {
+                        print("🚪 Logout button pressed")
+                        print("🚪 Current user before logout: \(authViewModel.currentUser?.email ?? "nil")")
+                        authViewModel.logout()
+                        print("🚪 Current user after logout: \(authViewModel.currentUser?.email ?? "nil")")
                         presentationMode.wrappedValue.dismiss()
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
+                    Button("Refresh") {
+                        print("🔄 Toolbar refresh pressed")
                         viewModel.loadTodaysSchedule()
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
                     }
                 }
             }
             .onAppear {
+                print("🔵 CollectorScheduleListView appeared")
                 viewModel.loadTodaysSchedule()
             }
         }

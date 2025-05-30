@@ -8,9 +8,10 @@
 import SwiftUI
 
 struct LoginView: View {
-    @StateObject private var authViewModel = AuthViewModel()
-    @State private var email = ""          // Start empty - no auto-fill
-    @State private var password = ""       // Start empty - no auto-fill
+    // Use shared instance instead of creating new one
+    @ObservedObject private var authViewModel = AuthViewModel.shared
+    @State private var email = ""
+    @State private var password = ""
 
     @State private var navigateToCollectorView = false
 
@@ -36,11 +37,12 @@ struct LoginView: View {
                     ProgressView("Logging in...")
                 } else {
                     Button("Login") {
+                        print("🔵 Login button pressed with email: \(email)")
                         authViewModel.login(email: email, pass: password)
                     }
                     .padding()
                     .buttonStyle(.borderedProminent)
-                    .disabled(email.isEmpty || password.isEmpty) // Disable if fields are empty
+                    .disabled(email.isEmpty || password.isEmpty)
                 }
 
                 if let error = authViewModel.authError {
@@ -49,16 +51,36 @@ struct LoginView: View {
                         .font(.caption)
                 }
 
+                // Debug info
+                if let user = authViewModel.currentUser {
+                    Text("✅ Logged in as: \(user.email)")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                } else {
+                    Text("❌ Not logged in")
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                }
+
                 NavigationLink(destination: CollectorScheduleListView().environmentObject(CollectorViewModel()),
                                isActive: $navigateToCollectorView) {
                     EmptyView()
                 }
             }
             .padding()
+            .onAppear {
+                // Clear navigation state when returning to login
+                navigateToCollectorView = false
+                print("🔵 LoginView appeared - clearing navigation state")
+                print("🔵 Current user in LoginView: \(authViewModel.currentUser?.email ?? "nil")")
+            }
             .onChange(of: authViewModel.currentUser) { user in
+                print("🔄 User state changed in LoginView: \(user?.email ?? "nil")")
                 if let user = user, user.role == "Collector" {
+                    print("✅ Valid collector user - navigating to collector view")
                     navigateToCollectorView = true
                 } else {
+                    print("❌ No valid user - staying on login")
                     navigateToCollectorView = false
                 }
             }

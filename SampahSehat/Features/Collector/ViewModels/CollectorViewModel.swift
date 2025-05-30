@@ -10,60 +10,54 @@ import SwiftUI
 @MainActor
 class CollectorViewModel: ObservableObject {
     private var firestoreService = FirestoreService()
-    private var authService = FirebaseAuthService()
+    // Use shared instance instead of creating new one
+    private var authService = FirebaseAuthService.shared
 
     @Published var todaysSchedule: [PickupSchedule] = []
     @Published var isLoading: Bool = false
     @Published var updateError: String? = nil
 
     func loadTodaysSchedule() {
-        print("🟡 CollectorViewModel.loadTodaysSchedule called")
+        print("🚀 CollectorViewModel: Starting to load today's schedule")
         
         guard let collectorId = authService.getCurrentUserAuthId() else {
-            print("🔴 No collector ID found")
+            print("❌ No collector ID found from auth service")
             updateError = "Collector not logged in."
             return
         }
 
-        print("🟡 Loading schedule for collector: \(collectorId)")
+        print("👤 Loading schedule for collector: \(collectorId)")
         isLoading = true
         updateError = nil
         
         Task {
-            do {
-                let schedules = await firestoreService.getSchedulesForCollector(collectorId: collectorId, date: Date())
-                print("🟢 Received \(schedules.count) schedules from service")
+            print("📞 Calling firestoreService.getSchedulesForCollector...")
+            let schedules = await firestoreService.getSchedulesForCollector(collectorId: collectorId, date: Date())
+            print("📨 Received \(schedules.count) schedules from service")
+            
+            // Update UI on main thread
+            await MainActor.run {
+                self.todaysSchedule = schedules
+                self.isLoading = false
                 
-                await MainActor.run {
-                    self.todaysSchedule = schedules
-                    self.isLoading = false
-                    
-                    if schedules.isEmpty {
-                        self.updateError = "No schedules found for today. Collector ID: \(collectorId)"
-                        print("🔴 No schedules found for collector \(collectorId)")
-                    } else {
-                        self.updateError = nil
-                        print("🟢 Successfully loaded \(schedules.count) schedules to UI")
-                    }
+                if schedules.isEmpty {
+                    self.updateError = "No schedules found for today."
+                    print("❌ No schedules found - setting error message")
+                } else {
+                    self.updateError = nil
+                    print("✅ Successfully loaded \(schedules.count) schedules")
                 }
-                
-                // Debug: print each schedule
-                for schedule in schedules {
-                    print("🟢 Schedule in ViewModel: \(schedule.areaInfo) - \(schedule.status)")
-                }
-                
-            } catch {
-                await MainActor.run {
-                    self.updateError = "Error loading schedules: \(error.localizedDescription)"
-                    self.isLoading = false
-                }
-                print("🔴 Error loading schedules: \(error)")
+            }
+            
+            // Print each schedule for debugging
+            for schedule in schedules {
+                print("📋 Loaded schedule: \(schedule.areaInfo) - \(schedule.status)")
             }
         }
     }
 
     func markScheduleCompleted(scheduleId: String) {
-        print("🟡 Marking schedule \(scheduleId) as completed")
+        print("✅ Marking schedule \(scheduleId) as completed")
         updateError = nil
         Task {
             let success = await firestoreService.updateScheduleStatus(scheduleId: scheduleId, status: "Completed")
@@ -71,18 +65,18 @@ class CollectorViewModel: ObservableObject {
                 if success {
                     if let index = todaysSchedule.firstIndex(where: { $0.scheduleId == scheduleId }) {
                         todaysSchedule[index].status = "Completed"
-                        print("🟢 UI updated for completed schedule")
+                        print("✅ UI updated for completed schedule")
                     }
                 } else {
                     updateError = "Failed to mark as completed. Please try again."
-                    print("🔴 Failed to mark as completed")
+                    print("❌ Failed to mark schedule as completed")
                 }
             }
         }
     }
 
     func markScheduleMissed(scheduleId: String) {
-        print("🟡 Marking schedule \(scheduleId) as missed")
+        print("❌ Marking schedule \(scheduleId) as missed")
         updateError = nil
         Task {
             let success = await firestoreService.updateScheduleStatus(scheduleId: scheduleId, status: "Missed")
@@ -90,11 +84,11 @@ class CollectorViewModel: ObservableObject {
                 if success {
                     if let index = todaysSchedule.firstIndex(where: { $0.scheduleId == scheduleId }) {
                         todaysSchedule[index].status = "Missed"
-                        print("🟢 UI updated for missed schedule")
+                        print("✅ UI updated for missed schedule")
                     }
                 } else {
                     updateError = "Failed to mark as missed. Please try again."
-                    print("🔴 Failed to mark as missed")
+                    print("❌ Failed to mark schedule as missed")
                 }
             }
         }

@@ -10,35 +10,47 @@ import FirebaseAuth
 
 @MainActor
 class AuthViewModel: ObservableObject {
-    private var firebaseAuthService = FirebaseAuthService()
+    // Singleton instance - shared across the app
+    static let shared = AuthViewModel()
+    
+    // Use shared instance instead of creating new one
+    private var firebaseAuthService = FirebaseAuthService.shared
     private var firestoreService = FirestoreService()
 
     @Published var currentUser: User? = nil
     @Published var isLoading: Bool = false
     @Published var authError: String? = nil
 
-    init() {
+    // Private initializer to prevent multiple instances
+    private init() {
+        print("🔧 AuthViewModel initialized")
         // Only load user if there's an existing auth session
         if let authId = firebaseAuthService.getCurrentUserAuthId() {
+            print("🔍 Found existing auth ID: \(authId)")
             Task {
                 self.currentUser = await firestoreService.getUser(userId: authId)
             }
+        } else {
+            print("🔍 No existing auth ID found")
         }
-        // If no auth ID, currentUser stays nil - will show login screen
     }
 
     func login(email: String, pass: String) {
+        print("🔐 AuthViewModel.login called")
         isLoading = true
         authError = nil
         Task {
             do {
                 // Try to login and get user data directly
                 if let user = try await firebaseAuthService.login(email: email, pass: pass) {
+                    print("✅ AuthViewModel: Login successful, setting currentUser")
                     self.currentUser = user
                 } else {
+                    print("❌ AuthViewModel: Login returned nil user")
                     self.authError = "Login failed. Please try again."
                 }
             } catch {
+                print("❌ AuthViewModel: Login error: \(error.localizedDescription)")
                 self.authError = error.localizedDescription
             }
             isLoading = false
@@ -68,11 +80,14 @@ class AuthViewModel: ObservableObject {
     }
 
     func logout() {
+        print("🚪 AuthViewModel.logout called")
         do {
             try firebaseAuthService.logout()
             self.currentUser = nil
+            print("✅ AuthViewModel: Logout successful - currentUser set to nil")
         } catch {
             self.authError = "Logout failed: \(error.localizedDescription)"
+            print("❌ AuthViewModel: Logout error: \(error.localizedDescription)")
         }
     }
 }
