@@ -8,25 +8,19 @@
 import SwiftUI
 import FirebaseCore
 
-class AppDelegate: NSObject, UIApplicationDelegate {
-    func application(_ application: UIApplication,
-                     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
-        print("AppDelegate: didFinishLaunchingWithOptions - Configuring Firebase...")
-        FirebaseApp.configure()
-        print("AppDelegate: Firebase configured!")
-        return true
-    }
-}
-
 @main
 struct SampahSehatApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     
-    init() {
-        FirebaseApp.configure()
-        print("Firebase Configuration Success")
+    class FirebaseManager {
+        static var hasConfigured = false
+        static func configure() {
+            if !hasConfigured {
+                FirebaseApp.configure()
+                hasConfigured = true
+            }
+        }
     }
-    
     
     var body: some Scene {
         WindowGroup {
