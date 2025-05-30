@@ -14,17 +14,17 @@ class AuthViewModel: ObservableObject {
     private var firestoreService = FirestoreService()
 
     @Published var currentUser: User? = nil
-
     @Published var isLoading: Bool = false
-
     @Published var authError: String? = nil
 
     init() {
+        // Only load user if there's an existing auth session
         if let authId = firebaseAuthService.getCurrentUserAuthId() {
             Task {
                 self.currentUser = await firestoreService.getUser(userId: authId)
             }
         }
+        // If no auth ID, currentUser stays nil - will show login screen
     }
 
     func login(email: String, pass: String) {
@@ -32,13 +32,9 @@ class AuthViewModel: ObservableObject {
         authError = nil
         Task {
             do {
-                try await firebaseAuthService.login(email: email, pass: pass)
-                if let authId = firebaseAuthService.getCurrentUserAuthId() {
-                    self.currentUser = await firestoreService.getUser(userId: authId)
-                    if self.currentUser == nil {
-                        self.authError = "User profile not found."
-                        try? firebaseAuthService.logout()
-                    }
+                // Try to login and get user data directly
+                if let user = try await firebaseAuthService.login(email: email, pass: pass) {
+                    self.currentUser = user
                 } else {
                     self.authError = "Login failed. Please try again."
                 }

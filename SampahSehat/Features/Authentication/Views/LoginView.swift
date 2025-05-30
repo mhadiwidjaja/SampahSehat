@@ -9,8 +9,8 @@ import SwiftUI
 
 struct LoginView: View {
     @StateObject private var authViewModel = AuthViewModel()
-    @State private var email = ""
-    @State private var password = ""
+    @State private var email = ""          // Start empty - no auto-fill
+    @State private var password = ""       // Start empty - no auto-fill
 
     @State private var navigateToCollectorView = false
 
@@ -19,6 +19,10 @@ struct LoginView: View {
             VStack(spacing: 20) {
                 Text("SampahSehat Collector Login")
                     .font(.largeTitle)
+                
+                Text("Use: collector@test.com / 123456")
+                    .font(.caption)
+                    .foregroundColor(.gray)
 
                 TextField("Email", text: $email)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -29,21 +33,21 @@ struct LoginView: View {
                     .textFieldStyle(RoundedBorderTextFieldStyle())
 
                 if authViewModel.isLoading {
-                    ProgressView()
+                    ProgressView("Logging in...")
                 } else {
                     Button("Login") {
                         authViewModel.login(email: email, pass: password)
                     }
                     .padding()
                     .buttonStyle(.borderedProminent)
+                    .disabled(email.isEmpty || password.isEmpty) // Disable if fields are empty
                 }
 
                 if let error = authViewModel.authError {
                     Text(error)
                         .foregroundColor(.red)
+                        .font(.caption)
                 }
-                NavigationLink("Create Account", destination: RegisterView().environmentObject(authViewModel))
-                                    .padding(.top)
 
                 NavigationLink(destination: CollectorScheduleListView().environmentObject(CollectorViewModel()),
                                isActive: $navigateToCollectorView) {

@@ -10,73 +10,90 @@ import FirebaseFirestore
 
 class FirestoreService {
     private let db = Firestore.firestore()
+    
+    // Dummy data for testing
+    private let dummySchedules: [PickupSchedule] = [
+        PickupSchedule(
+            scheduleId: "schedule1",
+            areaInfo: "Blok A - Jl. Sudirman",
+            pickupDate: "2025-05-30",
+            status: "Pending",
+            assignedCollectorId: "collector123"
+        ),
+        PickupSchedule(
+            scheduleId: "schedule2",
+            areaInfo: "Blok B - Jl. Thamrin",
+            pickupDate: "2025-05-30",
+            status: "Pending",
+            assignedCollectorId: "collector123"
+        ),
+        PickupSchedule(
+            scheduleId: "schedule3",
+            areaInfo: "Blok C - Jl. Gatot Subroto",
+            pickupDate: "2025-05-30",
+            status: "Completed",
+            assignedCollectorId: "collector123"
+        ),
+        PickupSchedule(
+            scheduleId: "schedule4",
+            areaInfo: "Blok D - Jl. Rasuna Said",
+            pickupDate: "2025-05-30",
+            status: "Pending",
+            assignedCollectorId: "collector123"
+        )
+    ]
+    
+    private var currentSchedules: [PickupSchedule] = []
 
     func getUser(userId: String) async -> User? {
-        do {
-            let document = try await db.collection("users").document(userId).getDocument()
-            return try document.data(as: User.self)
-        } catch {
-            print("Error fetching user: \(error.localizedDescription)")
-            return nil
+        // Return dummy collector user
+        if userId == "collector123" {
+            return User(
+                userId: "collector123",
+                email: "collector@test.com",
+                locationInfo: "Jakarta Area",
+                role: "Collector"
+            )
         }
+        return nil
     }
     
     func getScheduleForArea(areaInfo: String, date: Date) async -> PickupSchedule? {
-        let dateString = ISO8601DateFormatter().string(from: date)
-        do {
-            let querySnapshot = try await db.collection("pickupSchedules")
-                .whereField("areaInfo", isEqualTo: areaInfo)
-                .whereField("pickupDate", isEqualTo: dateString)
-                .limit(to: 1)
-                .getDocuments()
-            guard let document = querySnapshot.documents.first else { return nil }
-            return try document.data(as: PickupSchedule.self)
-        } catch {
-            print("Error fetching schedule for area: \(error.localizedDescription)")
-            return nil
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let dateString = dateFormatter.string(from: date)
+        
+        return currentSchedules.first { schedule in
+            schedule.areaInfo == areaInfo && schedule.pickupDate == dateString
         }
     }
 
     func getSchedulesForCollector(collectorId: String, date: Date) async -> [PickupSchedule] {
-        let calendar = Calendar.current
-        let startOfDay = calendar.startOfDay(for: date)
-        let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay)!
+        // Initialize dummy data if needed
+        if currentSchedules.isEmpty {
+            currentSchedules = dummySchedules
+        }
+        
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
-        let dateStringForQuery = dateFormatter.string(from: date)
-
-        do {
-            let querySnapshot = try await db.collection("pickupSchedules")
-                .whereField("assignedCollectorId", isEqualTo: collectorId)
-                .getDocuments()
-            let schedules = querySnapshot.documents.compactMap { document -> PickupSchedule? in
-                var schedule = try? document.data(as: PickupSchedule.self)
-                if let dateStr = schedule?.pickupDate, dateStr.hasPrefix(dateStringForQuery) {
-                    schedule?.scheduleId = document.documentID
-                    return schedule
-                } else if let dateStr = schedule?.pickupDate, schedule?.pickupDate == dateStringForQuery {
-                     schedule?.scheduleId = document.documentID
-                    return schedule
-                }
-                return nil
-            }
-            return schedules
-        } catch {
-            print("Error fetching schedules for collector: \(error.localizedDescription)")
-            return []
+        let dateString = dateFormatter.string(from: date)
+        
+        return currentSchedules.filter { schedule in
+            schedule.assignedCollectorId == collectorId && schedule.pickupDate == dateString
         }
     }
 
     func updateScheduleStatus(scheduleId: String, status: String) async -> Bool {
-        do {
-            try await db.collection("pickupSchedules").document(scheduleId).updateData([
-                "status": status,
-                "lastUpdated": Timestamp()
-            ])
-            return true
-        } catch {
-            print("Error updating schedule status: \(error.localizedDescription)")
-            return false
+        // Initialize dummy data if needed
+        if currentSchedules.isEmpty {
+            currentSchedules = dummySchedules
         }
+        
+        if let index = currentSchedules.firstIndex(where: { $0.scheduleId == scheduleId }) {
+            currentSchedules[index].status = status
+            print("Updated schedule \(scheduleId) to status: \(status)")
+            return true
+        }
+        return false
     }
 }
