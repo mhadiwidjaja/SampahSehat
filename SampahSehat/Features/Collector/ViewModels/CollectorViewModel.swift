@@ -10,12 +10,12 @@ import SwiftUI
 @MainActor
 class CollectorViewModel: ObservableObject {
     private var firestoreService = FirestoreService()
-    // Use shared instance instead of creating new one
     private var authService = FirebaseAuthService.shared
 
     @Published var todaysSchedule: [PickupSchedule] = []
     @Published var isLoading: Bool = false
     @Published var updateError: String? = nil
+    @Published var pendingUpdatesCount: Int = 0
 
     func loadTodaysSchedule() {
         guard let collectorId = authService.getCurrentUserAuthId() else {
@@ -27,12 +27,17 @@ class CollectorViewModel: ObservableObject {
         updateError = nil
         
         Task {
+            // Try to sync any pending updates first
+            await firestoreService.syncPendingUpdates()
+            
+            // Load schedules
             let schedules = await firestoreService.getSchedulesForCollector(collectorId: collectorId, date: Date())
             
             // Update UI on main thread
             await MainActor.run {
                 self.todaysSchedule = schedules
                 self.isLoading = false
+                self.pendingUpdatesCount = firestoreService.getPendingUpdatesCount()
                 
                 if schedules.isEmpty {
                     self.updateError = "No schedules found for today."
@@ -53,6 +58,7 @@ class CollectorViewModel: ObservableObject {
                         todaysSchedule[index].status = "Completed"
                         todaysSchedule[index].timestamp = getCurrentTimestamp()
                     }
+                    self.pendingUpdatesCount = firestoreService.getPendingUpdatesCount()
                 } else {
                     updateError = "Failed to mark as completed. Please try again."
                 }
@@ -71,6 +77,7 @@ class CollectorViewModel: ObservableObject {
                         todaysSchedule[index].reason = reason
                         todaysSchedule[index].timestamp = getCurrentTimestamp()
                     }
+                    self.pendingUpdatesCount = firestoreService.getPendingUpdatesCount()
                 } else {
                     updateError = "Failed to mark as missed. Please try again."
                 }
@@ -89,9 +96,19 @@ class CollectorViewModel: ObservableObject {
                         todaysSchedule[index].reason = reason
                         todaysSchedule[index].timestamp = getCurrentTimestamp()
                     }
+                    self.pendingUpdatesCount = firestoreService.getPendingUpdatesCount()
                 } else {
                     updateError = "Failed to mark as on hold. Please try again."
                 }
+            }
+        }
+    }
+    
+    func syncPendingUpdates() {
+        Task {
+            await firestoreService.syncPendingUpdates()
+            await MainActor.run {
+                self.pendingUpdatesCount = firestoreService.getPendingUpdatesCount()
             }
         }
     }
