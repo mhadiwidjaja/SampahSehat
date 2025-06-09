@@ -15,7 +15,7 @@ struct ScheduleListItemView: View {
     @State private var missedReason = ""
     @State private var onHoldReason = ""
     
-    private let missedReasons = ["Bin not out", "Address not found", "Road blocked", "Customer not available", "Other"]
+    private let missedReasons = ["Bin not accessible", "Address not found", "Road blocked", "Customer not available", "Other"]
     private let onHoldReasons = ["Road blocked", "Vehicle breakdown", "Weather conditions", "Safety concerns", "Other"]
     
     var body: some View {

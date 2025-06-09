@@ -23,7 +23,7 @@ class FirebaseAuthService {
 
     func login(email: String, pass: String) async throws -> User? {
         // For dummy data, we'll simulate login with predefined collector
-        if email == "collector@test.com" && pass == "123456" {
+        if email == "collector@test.com" && pass == "12345678" {
             // Mark as logged in and store user ID
             isLoggedIn = true
             loggedInUserId = "collector123"
