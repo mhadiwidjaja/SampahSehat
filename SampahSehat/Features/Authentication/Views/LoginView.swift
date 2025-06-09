@@ -79,7 +79,7 @@ struct LoginView: View {
                                         Text("Email: collector@test.com")
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
-                                        Text("Password: 123456")
+                                        Text("Password: 12345678")
                                             .font(.subheadline)
                                             .foregroundColor(.secondary)
                                     }
